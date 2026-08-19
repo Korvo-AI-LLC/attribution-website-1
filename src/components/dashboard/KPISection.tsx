@@ -1,12 +1,6 @@
 
 import StatCard from "@/components/cards/StatCard";
-
-type Booking = {
-  id: number;
-  appointmentType: string;
-  estimatedRevenue: number;
-  bookedDate: string;
-};
+import type { Booking } from "@/types/booking";
 
 type KPISectionProps = {
   bookings: Booking[];

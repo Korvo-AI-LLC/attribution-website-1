@@ -1,5 +1,5 @@
 "use client";
-
+import type { Booking } from "@/types/booking";
 import {
   Bar,
   BarChart,
@@ -10,12 +10,6 @@ import {
   YAxis,
 } from "recharts";
 
-type Booking = {
-  id: number;
-  appointmentType: string;
-  estimatedRevenue: number;
-  bookedDate: string;
-};
 
 type RevenueByTypeChartProps = {
   bookings: Booking[];
