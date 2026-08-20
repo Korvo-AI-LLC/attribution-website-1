@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { getAppointmentValue } from "@/lib/appointment-values";
+import { fromZonedTime } from "date-fns-tz";
 
 export async function POST(request: NextRequest) {
   try {
@@ -55,16 +56,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const bookedDatetime = bookingArgs.start_time;
+    const rawStartTime = bookingArgs.start_time;
     const summary = bookingArgs.summary || "";
 
-    // 7. Extract patient name from calendar summary
+    // 7. Convert timezone-less Trillet/Google time
+    // from Pacific local time into a proper UTC timestamp.
+    let bookedDatetime: string | null = null;
+
+    if (rawStartTime) {
+      const hasTimezone =
+        rawStartTime.endsWith("Z") ||
+        /[+-]\d{2}:\d{2}$/.test(rawStartTime);
+
+      if (hasTimezone) {
+        // Already contains timezone information
+        bookedDatetime = new Date(rawStartTime).toISOString();
+      } else {
+        // Trillet/Google sends local clinic time without timezone.
+        // Interpret it as America/Los_Angeles.
+        bookedDatetime = fromZonedTime(
+          rawStartTime,
+          "America/Los_Angeles"
+        ).toISOString();
+      }
+    }
+
+    // 8. Extract patient name from calendar summary
     const patientMatch = summary.match(/Patient:\s*([^|]+)/i);
 
     const patientName =
       patientMatch?.[1]?.trim() || null;
 
-    // 8. Extract appointment type from calendar summary
+    // 9. Extract appointment type from calendar summary
     const typeMatch = summary.match(/Type:\s*([^|]+)/i);
 
     const appointmentType =
@@ -79,11 +102,11 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 9. Calculate estimated revenue
+    // 10. Calculate estimated revenue
     const estimatedRevenue =
       getAppointmentValue(appointmentType);
 
-    // 10. Save booking into Supabase
+    // 11. Save booking into Supabase
     const { data, error } = await supabaseAdmin
       .from("booked_appointments")
       .upsert(
@@ -116,7 +139,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 11. Successful booking stored
+    // 12. Successful booking stored
     return NextResponse.json({
       success: true,
       booking: data,
